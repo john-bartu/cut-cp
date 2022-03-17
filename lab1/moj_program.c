@@ -4,37 +4,35 @@
 
 #include "../pomiar_czasu/pomiar_czasu.h"
 #include <stdio.h>
+#include <math.h>
 
-static int count = 9999999;
-
-void test1() {
-    printf("Test1\n");
-    inicjuj_czas();
-
-    for (int i = 0; i < count-1; i++) {
+void io_test(int count) {
+    for (int i = 0; i < count - 1; i++) {
         printf("H");
     }
-
-    printf("\ne");
-
-    drukuj_czas();
+    printf("\n");
 }
 
-void test2() {
-    printf("Test2\n");
-    inicjuj_czas();
+double calc_test(int count) {
     double test1 = 32190325454.0;
     double test2 = 2.0;
-    int wynik;
-
+    double wynik;
     for (int i = 0; i < count; i++) {
-        wynik = test1 /test2;
+        wynik = test1 - 1.2314 / test2 + 123.2131 - 1231.23 * 12312 - test1 / 2321.32342;
     }
-
-    drukuj_czas();
+    return wynik;
 }
 
-int main(int argc, char *argv[]) {
-    test1();
-    test2();
+int main() {
+    int count = 9999999;
+
+    inicjuj_czas();
+    io_test(count);
+    printf("Test Function I/O\n");
+    drukuj_czas();
+
+    inicjuj_czas();
+    calc_test(count);
+    printf("Test Function Calculations\n");
+    drukuj_czas();
 }
