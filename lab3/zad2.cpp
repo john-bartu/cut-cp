@@ -16,19 +16,30 @@
 #include <utility>
 #include <vector>
 
-#define NO_BEARS 5
 
 using namespace std;
 
 bool DEBUG = false;
 
-mutex forks[NO_BEARS];
+vector<mutex> bears_mutex;
 
 std::atomic<int> tableCount;
 mutex tableLock;
 condition_variable cv;
 
-int clock_time = 0;
+
+chrono::steady_clock::time_point start_time = chrono::steady_clock::now();
+
+static long elapsed_from_start() {
+    chrono::steady_clock::time_point end = chrono::steady_clock::now();
+    return chrono::duration_cast<std::chrono::milliseconds>(end - start_time).count();
+}
+
+static long elapsed_from_start_hours() {
+    return elapsed_from_start() / 1000;
+}
+
+int max_drinking_time = 0;
 
 int randomInt(int min = 0, int max = 10) {
     return min + (rand() % (max - min));
@@ -45,22 +56,27 @@ string names[] = {"Tales 👩",
                   "Dawid 👴",
                   "Patryk 🙍"};
 
-bool chairAvailable() { return tableCount > 0 && clock_time < 22 && clock_time > 6; }
+bool isBarOpen() { return elapsed_from_start_hours() < 22 && elapsed_from_start_hours() >= 6; }
+
+bool chairAvailable() { return tableCount > 0 && isBarOpen(); }
 
 mutex printLock;
-
 
 class Client {
 private:
     int id;
     string name;
+    int bear_id;
 
     mutex &getBear() {
         while (true) {
-            for (auto &fork: forks) {
-                if (fork.try_lock()) {
-                    return fork;
+            int index = 0;
+            for (auto &bear: bears_mutex) {
+                if (bear.try_lock()) {
+                    this->bear_id = index;
+                    return bear;
                 }
+                index++;
             }
         }
     }
@@ -73,24 +89,29 @@ public:
 
     Client(int id, string name) : id(id), name(std::move(name)) {}
 
-    static void randomSleep() {
-        std::this_thread::sleep_for(std::chrono::milliseconds(rand() % 1000 + 500));
+    static int randomSleep() {
+        auto time = rand() % 1000 + 500;
+        std::this_thread::sleep_for(std::chrono::milliseconds(time));
+        return time;
     }
 
     void operator()() {
 
         {
             const lock_guard<mutex> lock(printLock);
-            cout << setw(20) << name << " id: " << id << ", want's enter bar, wait's for seat" << endl;
+            cout << setw(20) << name << " id: " << id << ", enter bar." << endl;
         }
 
         {
             unique_lock<mutex> tempLock(tableLock);
-
             if (!cv.wait_for(tempLock, chrono::seconds(1), chairAvailable)) {
                 {
                     const lock_guard<mutex> lock(printLock);
-                    cout << setw(20) << name << " id: " << id << ", i wait longer than hour, bye!" << endl;
+
+                    if (isBarOpen())
+                        cout << setw(20) << name << " id: " << id << ", i wait one hour, bye! (no seat)" << endl;
+                    else
+                        cout << setw(20) << name << " id: " << id << ", i wait one hour, bye! (bar closed)" << endl;
                 }
                 return;
             }
@@ -98,32 +119,31 @@ public:
             {
                 const lock_guard<mutex> lock(printLock);
                 cout << setw(20) << name << " id: " << id << ", has a seat." << endl;
-                cout << setw(20) << "There left " << tableCount << " seats." << endl;
             }
 
             tableCount--;
         }
 
-        if (DEBUG) printf("Client id: %i, joined the table\n", id);
-
         randomSleep();
 
         for (int j = 0; j < 2; j++) {
-            if (DEBUG) printf("Client id: %i, acquiring %i 🍺\n", id, j);
             auto &bear = getBear();
-
-            if (DEBUG) printf("Client id: %i, acquired %i 🍺\n", id, j);
-
 
             {
                 const lock_guard<mutex> lock(printLock);
-                cout << setw(20) << name << ", is drinking " << j + 1 << " 🍺 now" << endl;
+                cout << setw(20) << name << " id: " << id << ", is drinking " << j + 1 << " 🍺:" << this->bear_id
+                     << "  now" << endl;
             }
 
-            randomSleep();
+            auto drinking_time = randomSleep();
 
             bear.unlock();
-            if (DEBUG) printf("Client id: %i, released 🍺\n", id);
+
+            {
+                const lock_guard<mutex> lock(printLock);
+                cout << setw(20) << name << " id: " << id << ", released " << j + 1 << " 🍺:" << this->bear_id
+                     << " after " << drinking_time << "ms." << endl;
+            }
         }
 
 
@@ -136,51 +156,63 @@ public:
                 tableCount++;
             }
 
-            if (DEBUG) printf("Client id: %i, left the table\n", id);
+            cout << setw(20) << name << " id: " << id << ", left bar" << endl;
         }
     }
 };
 
 int main(int argc, char *argv[]) {
 
-    DEBUG = (argc == 2 && strcmp(argv[1], "-d") == 0);
+    if (argc != 4) {
+        cout << "Run with: <client_count|int> <bear_count|int> <max_drinking_time(ms)|int>";
+        return 0;
+    }
+
+    int total_client_count = atoi(argv[1]);
+    int bear_count = atoi(argv[2]);
+    max_drinking_time = atoi(argv[3]);
+
+    int delay_between_clients = 26000 / total_client_count;
+
+    cout << "Arguments:" << endl
+         << "Clients: " << total_client_count << " time between clients: " << delay_between_clients << "ms" << endl
+         << "Bears: " << bear_count << endl
+         << "Max drinking time: " << max_drinking_time << endl << endl;
+
+
+    std::vector<std::mutex> new_mutexes(bear_count);
+    bears_mutex.swap(new_mutexes);
 
     cout << "Bar simulator, waiter, limited glass count" << endl;
 
-    if (DEBUG) printf("In debugging mode...\n");
-
-    tableLock.lock();
-    tableCount = NO_BEARS + 2;
-    tableLock.unlock();
-
+    tableCount = bear_count + 5;
 
     cout << "Create threads... " << endl;
-
 
     vector<thread> threads;
     int client_count = 0;
 
 
     cout << "Bar is open between 6 and 22!" << endl;
-    while (clock_time < 24) {
+    start_time = chrono::steady_clock::now();
 
-        {
+
+
+    while (elapsed_from_start_hours() < 26) {
+        if (elapsed_from_start() % 1000 < 250) {
             const lock_guard<mutex> lock(printLock);
-            cout << " Time: " << clock_time << ":00\n";
+            cout << " Time: " << elapsed_from_start_hours() << ":00\n";
         }
-
 
         threads.emplace_back(Client(client_count));
         client_count++;
-        this_thread::sleep_for(chrono::seconds(1));
-        clock_time++;
+        this_thread::sleep_for(chrono::milliseconds(delay_between_clients));
     }
 
     for (auto &thread: threads) {
         thread.join();
     }
 
-    cout << "Seats count: " << tableCount << endl;
     printf("Thank you for attention.\n");
     return 0;
 }
