@@ -90,7 +90,7 @@ public:
     Client(int id, string name) : id(id), name(std::move(name)) {}
 
     static int randomSleep() {
-        auto time = rand() % 1000 + 500;
+        auto time = rand() % (max_drinking_time - 500) + 500;
         std::this_thread::sleep_for(std::chrono::milliseconds(time));
         return time;
     }
@@ -195,7 +195,6 @@ int main(int argc, char *argv[]) {
 
     cout << "Bar is open between 6 and 22!" << endl;
     start_time = chrono::steady_clock::now();
-
 
 
     while (elapsed_from_start_hours() < 26) {
