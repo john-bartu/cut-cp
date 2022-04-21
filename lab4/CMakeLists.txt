@@ -1,5 +1,5 @@
 
-project(PW_LAB_3)
+project(PW_LAB_4)
 
 set(CMAKE_CXX_FLAGS -pthread)
 
