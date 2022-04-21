@@ -5,7 +5,7 @@
 
 int main() {
     long sum = 0;
-    int n = 10;
+    int n = 1234;
 
 #pragma omp parallel for schedule(static) num_threads(NO_THREADS)
     for (int i = 0; i < 500; i++) {

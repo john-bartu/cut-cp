@@ -1,7 +1,7 @@
 #include <cstdio>
 #include <omp.h>
 
-#define NO_THREADS 8
+#define NO_THREADS 6
 #define NO_ITERATIONS 10000000
 
 void reduction_test() {
