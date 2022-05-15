@@ -30,39 +30,40 @@ class MapThread extends Thread {
 
 public class Exercise2 {
 
-    public static void main(String args[]) {
-
-        int n = 16, m = 64;
-        int num_threads = 6;
-
-        char[][] vector1 = new char[n][m];
-
+    public static void main(String[] args) {
+        int size_y = 16, size_x = 64;
+        int number_of_threads = 6;
+        char[][] image = new char[size_y][size_x];
         var symbols = new ArrayList<>(Arrays.asList('!', '@', '#', '$', '%', '^', '&', '*', '(', ')', '_'));
 
+
+        // Generate image (no white-spaces)
         var random = new Random();
+        for (int i = 0; i < size_y; i++)
+            for (int j = 0; j < size_x; j++)
+                image[i][j] = (char) (random.nextInt(95) + 27);
 
-        for (int i = 0; i < n; i++)
-            for (int j = 0; j < m; j++)
-                vector1[i][j] = (char) (random.nextInt(95)+27);
-
-
-        for (int i = 0; i < n; i++) {
-            for (int j = 0; j < m; j++)
-                System.out.print(vector1[i][j]);
+        // Display image
+        for (int i = 0; i < size_y; i++) {
+            for (int j = 0; j < size_x; j++)
+                System.out.print(image[i][j]);
             System.out.println();
         }
 
-
+        // Threads, and chunks
         var threads = new ArrayList<MapThread>();
-        var chunks = Chunky(symbols, num_threads);
+        var chunks = Chunky(symbols, number_of_threads);
 
-        for (int i = 0; i < num_threads; i++) {
+        // Run jobs
+        for (int i = 0; i < number_of_threads; i++) {
             var chunk = chunks.get(i);
-            MapThread thread = new MapThread(vector1, chunk);
+            MapThread thread = new MapThread(image, chunk);
             thread.start();
             threads.add(thread);
-            System.out.printf("Thread %d calculates %s\n", i, chunk);
+            System.out.printf("T<%d> count symbols: %s\n", i, chunk);
         }
+
+        // Wait for Jobs
         for (var thread : threads) {
             try {
                 thread.join();
@@ -71,24 +72,23 @@ public class Exercise2 {
             }
         }
 
+        // Show results
         for (var thread : threads) {
-            System.out.println(thread.toString() + " :");
+            System.out.printf("-- %s --\n", thread.getName());
             thread.list.forEach((character, integer) -> System.out.println(character + " : " + integer));
             System.out.println();
         }
-
-
     }
 
-    public static <T> HashMap<Integer, ArrayList<T>> Chunky(ArrayList<T> list, int count) {
-        HashMap<Integer, ArrayList<T>> chunks = new HashMap<>();
+    public static <T> ArrayList<ArrayList<T>> Chunky(ArrayList<T> t_to_distribute, int number_of_slices) {
+        ArrayList<ArrayList<T>> chunks = new ArrayList<>();
 
-        for (int i = 0; i < count; i++)
-            chunks.put(i, new ArrayList<>());
+        for (int i = 0; i < number_of_slices; i++)
+            chunks.add(new ArrayList<>());
 
-        for (int i = 0; i < list.size(); i++) {
-            int threadNum = Math.floorMod(Math.floorMod(i + 1, count) - 1, count);
-            chunks.get(threadNum).add(list.get(i));
+        for (int i = 0; i < t_to_distribute.size(); i++) {
+            int thread_number = Math.floorMod(Math.floorMod(i + 1, number_of_slices) - 1, number_of_slices);
+            chunks.get(thread_number).add(t_to_distribute.get(i));
         }
 
         return chunks;
