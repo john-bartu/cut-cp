@@ -1,3 +1,8 @@
 .idea
 *.o
 /lab1/moj_program
+cmake-build-debug
+target
+*.zip
+*.tmp
+~$*
