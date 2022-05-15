@@ -51,7 +51,7 @@ public class Exercise1 {
             SumThread thread = new SumThread(vectorSum, vector1, vector2, chunk);
             thread.start();
             threads.add(thread);
-            System.out.printf("T<%d> adds elements at indices: %s\n", i, chunk);
+            System.out.println("T<" + i + "> adds elements at indices: " + chunk);
         }
 
         // Wait for jobs

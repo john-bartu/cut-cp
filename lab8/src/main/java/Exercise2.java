@@ -60,7 +60,7 @@ public class Exercise2 {
             MapThread thread = new MapThread(image, chunk);
             thread.start();
             threads.add(thread);
-            System.out.printf("T<%d> count symbols: %s\n", i, chunk);
+            System.out.println("T<" + i + "> count symbols: " + chunk);
         }
 
         // Wait for Jobs
@@ -74,7 +74,7 @@ public class Exercise2 {
 
         // Show results
         for (var thread : threads) {
-            System.out.printf("-- %s --\n", thread.getName());
+            System.out.println("-- " + thread.getName() + " --");
             thread.list.forEach((character, integer) -> System.out.println(character + " : " + integer));
             System.out.println();
         }
@@ -87,8 +87,7 @@ public class Exercise2 {
             chunks.add(new ArrayList<>());
 
         for (int i = 0; i < t_to_distribute.size(); i++) {
-            int thread_number = Math.floorMod(Math.floorMod(i + 1, number_of_slices) - 1, number_of_slices);
-            chunks.get(thread_number).add(t_to_distribute.get(i));
+            chunks.get(i % number_of_slices).add(t_to_distribute.get(i));
         }
 
         return chunks;

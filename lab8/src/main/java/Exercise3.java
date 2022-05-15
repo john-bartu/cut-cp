@@ -75,10 +75,7 @@ public class Exercise3 {
         }
 
         // Display results
-        for (int prime : Arrays.stream(isPrime).filter(num -> num != 0).toArray()) {
-            System.out.print(prime + ", ");
-        }
-        System.out.println();
+        System.out.println("Primes: " + Arrays.toString(Arrays.stream(isPrime).filter(num -> num != 0).toArray()));
     }
 
     public static List<Section> ChunkySection(int n, int count) {
